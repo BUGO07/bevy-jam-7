@@ -80,7 +80,6 @@ fn spawn_level(
             music(level_assets.music.clone()),
         ))
         .id();
-    let scene = commands.spawn(SceneRoot(level_assets.cube.clone())).id();
 
     commands
         .spawn((
@@ -88,8 +87,9 @@ fn spawn_level(
             Transform::default(),
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
+            SceneRoot(level_assets.cube.clone()),
         ))
-        .add_children(&[*camera, music, scene]);
+        .add_children(&[*camera, music]);
 }
 
 fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
