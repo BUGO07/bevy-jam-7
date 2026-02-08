@@ -10,25 +10,7 @@ use crate::{
     screens::Screen,
 };
 
-pub(super) fn plugin(app: &mut App) {
-    app.load_resource::<LevelAssets>();
-}
-
-#[derive(Resource, Asset, Clone, Reflect)]
-#[reflect(Resource)]
-pub struct LevelAssets {
-    #[dependency]
-    music: Handle<AudioSample>,
-}
-
-impl FromWorld for LevelAssets {
-    fn from_world(world: &mut World) -> Self {
-        let assets = world.resource::<AssetServer>();
-        Self {
-            music: assets.load("audio/music/Fluffing A Duck.ogg"),
-        }
-    }
-}
+pub(super) fn plugin(app: &mut App) {}
 
 /// A system that spawns the main level.
 pub fn spawn_level(

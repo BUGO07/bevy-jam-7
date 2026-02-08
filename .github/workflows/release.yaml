@@ -10,15 +10,15 @@ on:
         type: string
       build_for_windows:
         description: "Build for Windows (WARNING: slow!)"
-        default: true
+        default: false
         type: boolean
       build_for_macos:
         description: "Build for macOS"
-        default: true
+        default: false
         type: boolean
       build_for_linux:
         description: "Build for Linux"
-        default: true
+        default: false
         type: boolean
       build_for_web:
         description: "Build for web"
@@ -40,8 +40,8 @@ on:
         description: "Deny warnings"
         default: false
         type: boolean
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
 
 # Cancel the release workflow when a more recent workflow begins.
 concurrency:
