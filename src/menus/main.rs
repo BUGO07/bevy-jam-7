@@ -16,6 +16,7 @@ fn spawn_main_menu(mut commands: Commands) {
         #[cfg(not(target_family = "wasm"))]
         children![
             widget::button("Play", enter_loading_or_gameplay_screen),
+            widget::button("Test", enter_test_mode),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
             widget::button("Exit", exit_app),
@@ -23,6 +24,7 @@ fn spawn_main_menu(mut commands: Commands) {
         #[cfg(target_family = "wasm")]
         children![
             widget::button("Play", enter_loading_or_gameplay_screen),
+            widget::button("Test", enter_test_mode),
             widget::button("Settings", open_settings_menu),
             widget::button("Credits", open_credits_menu),
         ],
@@ -39,6 +41,13 @@ fn enter_loading_or_gameplay_screen(
     } else {
         next_screen.set(Screen::Loading);
     }
+}
+
+fn enter_test_mode(
+    _: On<Pointer<Click>>,
+    mut next_screen: ResMut<NextState<Screen>>,
+) {
+    next_screen.set(Screen::Test);
 }
 
 fn open_settings_menu(_: On<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {

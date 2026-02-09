@@ -10,10 +10,12 @@ mod dev_tools;
 mod menus;
 mod screens;
 mod theme;
+mod test_mode;
 
 use avian3d::PhysicsPlugins;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_skein::SkeinPlugin;
+use crate::test_mode::MainCamera;
 
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
@@ -53,6 +55,7 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
+            test_mode::TestModePlugin, //Max: Things to test before adding them to the gameplay
             SkeinPlugin::default(),
             PhysicsPlugins::default(),
         ));
@@ -99,5 +102,8 @@ struct Pause(pub bool);
 struct PausableSystems;
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera3d::default()));
+    commands.spawn((Name::new("Camera"),
+    Camera3d::default(),
+    MainCamera,
+    ));
 }

@@ -26,4 +26,5 @@ pub enum Screen {
     Title,
     Loading,
     Gameplay,
+    Test,
 }
