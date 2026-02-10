@@ -19,13 +19,18 @@ use crate::{
 };
 
 mod character_controller;
+mod enemy;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 struct Player;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((PhysicsPlugins::default(), CharacterControllerPlugin));
+    app.add_plugins((
+        PhysicsPlugins::default(),
+        CharacterControllerPlugin,
+        enemy::EnemyPlugin,
+    ));
     app.load_resource::<LevelAssets>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
     app.add_systems(
@@ -129,7 +134,7 @@ fn spawn_level(
         ))
         .id();
 
-    commands
+    let level = commands
         .spawn((
             Name::new("Level"),
             Transform::default(),
@@ -137,7 +142,17 @@ fn spawn_level(
             DespawnOnExit(Screen::Gameplay),
             SceneRoot(level_assets.cube.clone()),
         ))
-        .add_children(&[player, light, music]);
+        .add_children(&[player, light, music])
+        .id();
+
+    commands.queue(enemy::EnemySpawnCmd {
+        pos: Isometry3d::from_translation(vec3(0.0, 0.9, 5.0)),
+        parent: Some(level),
+    });
+    commands.queue(enemy::EnemySpawnCmd {
+        pos: Isometry3d::from_translation(vec3(4.0, 0.9, 5.0)),
+        parent: Some(level),
+    });
 }
 
 fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
