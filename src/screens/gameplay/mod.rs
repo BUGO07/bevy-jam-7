@@ -5,9 +5,19 @@ use avian3d::{
     prelude::{CoefficientCombine, Collider, Friction, GravityScale, Restitution},
 };
 use bevy::{
-    input::common_conditions::input_just_pressed, light::SunDisk, prelude::*, window::CursorOptions,
+    camera::Exposure,
+    core_pipeline::tonemapping::Tonemapping,
+    input::common_conditions::input_just_pressed,
+    light::{AtmosphereEnvironmentMapLight, SunDisk, VolumetricFog},
+    pbr::{
+        Atmosphere, AtmosphereSettings, Falloff, PhaseFunction, ScatteringMedium, ScatteringTerm,
+    },
+    post_process::bloom::Bloom,
+    prelude::*,
+    window::CursorOptions,
 };
 use bevy_seedling::sample::AudioSample;
+use std::f32::consts::PI;
 
 use crate::{
     Pause,
@@ -76,6 +86,12 @@ pub(super) fn plugin(app: &mut App) {
         OnEnter(Menu::None),
         unpause.run_if(in_state(Screen::Gameplay)),
     );
+
+    // Rotate sun
+    app.add_systems(
+        Update,
+        update_sun.run_if(in_state(Screen::Gameplay).and(in_state(Pause(false)))),
+    );
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]
@@ -115,6 +131,7 @@ fn spawn_level(
     level_assets: Res<LevelAssets>,
     camera: Single<Entity, With<Camera3d>>,
     mut cursor_options: Single<&mut CursorOptions>,
+    mut scattering_mediums: ResMut<Assets<ScatteringMedium>>,
 ) {
     set_cursor_grab(&mut cursor_options, true);
     let player = commands
@@ -138,10 +155,6 @@ fn spawn_level(
         .add_child(*camera)
         .id();
 
-    commands
-        .entity(*camera)
-        .insert(Transform::from_xyz(0.0, 0.8, 0.0));
-
     let music = commands
         .spawn((
             Name::new("Gameplay Music"),
@@ -149,13 +162,49 @@ fn spawn_level(
         ))
         .id();
 
+    // Set camera position and add atmosphere
+    commands.entity(*camera).insert((
+        Transform::from_xyz(0.0, 0.8, 0.0),
+        Atmosphere::earthlike(scattering_mediums.add(
+            // Custom alien green atmosphere with green-dominant Rayleigh scattering
+            ScatteringMedium::new(
+                256,
+                256,
+                [
+                    // Rayleigh scattering term - green-purple
+                    ScatteringTerm {
+                        absorption: Vec3::ZERO,
+                        scattering: Vec3::new(15.0e-6, 80.0e-6, 10.0e-6), // Much higher green, reduced red/blue
+                        falloff: Falloff::Exponential { scale: 9.0 / 60.0 },
+                        phase: PhaseFunction::Rayleigh,
+                    },
+                    // Mie scattering term - thick atmosphere (2.0e-6)
+                    ScatteringTerm {
+                        absorption: Vec3::splat(1.996e-6),
+                        scattering: Vec3::splat(1.68e-6), // Thick Mie scattering
+                        falloff: Falloff::Exponential { scale: 1.2 / 60.0 },
+                        phase: PhaseFunction::Mie { asymmetry: 0.8 },
+                    },
+                ],
+            ),
+        )),
+        AtmosphereSettings::default(),
+        Exposure {
+            ev100: Exposure::EV100_BLENDER,
+        },
+        Tonemapping::AcesFitted,
+        Bloom::NATURAL,
+        AtmosphereEnvironmentMapLight::default(),
+        VolumetricFog::default(),
+    ));
+
     let light = commands
         .spawn((
             Name::new("Light"),
             DirectionalLight {
                 shadows_enabled: true,
-                // purple-ish night color
-                color: Color::LinearRgba(LinearRgba::new(0.5, 0.3, 1.0, 1.0)),
+                // Light blue light
+                color: Color::LinearRgba(LinearRgba::new(0.2, 0.5, 1.0, 1.0)),
                 ..default()
             },
             SunDisk {
@@ -220,4 +269,11 @@ fn open_pause_menu(mut next_menu: ResMut<NextState<Menu>>) {
 
 fn close_menu(mut next_menu: ResMut<NextState<Menu>>) {
     next_menu.set(Menu::None);
+}
+
+fn update_sun(mut suns: Query<&mut Transform, With<DirectionalLight>>, time: Res<Time>) {
+    // TODO: tweak movement and speed of the sun
+    // currently rotates
+    suns.iter_mut()
+        .for_each(|mut tf| tf.rotate_x(-time.delta_secs() * PI / 100.0));
 }
