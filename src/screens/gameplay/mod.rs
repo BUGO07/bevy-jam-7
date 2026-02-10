@@ -19,11 +19,22 @@ use crate::{
 };
 
 mod character_controller;
+mod checkpoints;
 mod enemy;
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Default, Reflect)]
 #[reflect(Component)]
-struct Player;
+struct Player {
+    // normalized values (0.0..1.0)
+    health: f32,
+    hallucination_severity: f32,
+}
+
+impl Player {
+    fn is_alive(&self) -> bool {
+        self.health > 0.0
+    }
+}
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -44,11 +55,12 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            (pause, spawn_pause_overlay, open_pause_menu).run_if(
+            (pause, spawn_background_overlay, open_pause_menu).run_if(
                 in_state(Screen::Gameplay)
                     .and(in_state(Menu::None))
                     .and(input_just_pressed(KeyCode::KeyP).or(input_just_pressed(KeyCode::Escape))),
             ),
+            go_to_death_menu.run_if(in_state(Screen::Gameplay).and(in_state(Menu::None))),
             close_menu.run_if(
                 in_state(Screen::Gameplay)
                     .and(not(in_state(Menu::None)))
@@ -82,6 +94,19 @@ impl FromWorld for LevelAssets {
     }
 }
 
+fn go_to_death_menu(
+    mut commands: Commands,
+    mut next_menu: ResMut<NextState<Menu>>,
+    mut paused: ResMut<NextState<Pause>>,
+    player: Single<&Player>,
+) {
+    if !player.is_alive() {
+        commands.run_system_cached(spawn_background_overlay);
+        next_menu.set(Menu::Death);
+        paused.set(Pause(true));
+    }
+}
+
 fn spawn_level(
     mut commands: Commands,
     level_assets: Res<LevelAssets>,
@@ -102,7 +127,10 @@ fn spawn_level(
             Restitution::ZERO.with_combine_rule(CoefficientCombine::Min),
             GravityScale(2.0),
             Transform::from_xyz(0.0, 1.8, 2.0),
-            Player,
+            Player {
+                health: 1.0,
+                hallucination_severity: 0.0,
+            },
         ))
         .add_child(*camera)
         .id();
@@ -163,7 +191,7 @@ fn pause(mut next_pause: ResMut<NextState<Pause>>) {
     next_pause.set(Pause(true));
 }
 
-fn spawn_pause_overlay(mut commands: Commands) {
+fn spawn_background_overlay(mut commands: Commands) {
     commands.spawn((
         Name::new("Pause Overlay"),
         Node {
