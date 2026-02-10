@@ -11,23 +11,28 @@ use crate::{
     Pause,
     asset_tracking::LoadResource,
     menus::Menu,
-    screens::{
-        Screen,
-        gameplay::character_controller::{CharacterControllerBundle, CharacterControllerPlugin},
-        set_cursor_grab,
-    },
+    screens::{Screen, gameplay::character_controller::CharacterControllerBundle, set_cursor_grab},
 };
 
 mod character_controller;
 mod checkpoints;
 mod enemy;
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Default, Reflect)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Reflect)]
 #[reflect(Component)]
 struct Player {
     // normalized values (0.0..1.0)
     health: f32,
     hallucination_severity: f32,
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            health: 1.0,
+            hallucination_severity: 0.0,
+        }
+    }
 }
 
 impl Player {
@@ -39,8 +44,9 @@ impl Player {
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         PhysicsPlugins::default(),
-        CharacterControllerPlugin,
+        character_controller::CharacterControllerPlugin,
         enemy::EnemyPlugin,
+        checkpoints::CheckpointPlugin,
     ));
     app.load_resource::<LevelAssets>();
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
@@ -58,14 +64,9 @@ pub(super) fn plugin(app: &mut App) {
             (pause, spawn_background_overlay, open_pause_menu).run_if(
                 in_state(Screen::Gameplay)
                     .and(in_state(Menu::None))
-                    .and(input_just_pressed(KeyCode::KeyP).or(input_just_pressed(KeyCode::Escape))),
+                    .and(input_just_pressed(KeyCode::Escape)),
             ),
             go_to_death_menu.run_if(in_state(Screen::Gameplay).and(in_state(Menu::None))),
-            close_menu.run_if(
-                in_state(Screen::Gameplay)
-                    .and(not(in_state(Menu::None)))
-                    .and(input_just_pressed(KeyCode::KeyP)),
-            ),
         ),
     );
     app.add_systems(OnExit(Screen::Gameplay), (close_menu, unpause));
@@ -193,7 +194,7 @@ fn pause(mut next_pause: ResMut<NextState<Pause>>) {
 
 fn spawn_background_overlay(mut commands: Commands) {
     commands.spawn((
-        Name::new("Pause Overlay"),
+        Name::new("Background Overlay"),
         Node {
             width: percent(100),
             height: percent(100),

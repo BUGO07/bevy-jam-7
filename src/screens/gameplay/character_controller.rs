@@ -1,7 +1,13 @@
 use avian3d::{math::*, prelude::*};
 use bevy::{ecs::query::Has, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
 
-use crate::{PausableSystems, screens::gameplay::Player};
+use crate::{
+    PausableSystems,
+    screens::gameplay::{
+        Player,
+        checkpoints::{ActiveCheckpoint, Checkpoint},
+    },
+};
 
 pub struct CharacterControllerPlugin;
 
@@ -202,9 +208,17 @@ fn update_grounded(
         (Entity, &ShapeHits, &Rotation, Option<&MaxSlopeAngle>),
         With<CharacterController>,
     >,
+    checkpoints: Query<Entity, With<Checkpoint>>,
+    active_checkpoint: Single<Entity, With<ActiveCheckpoint>>,
 ) {
     for (entity, hits, rotation, max_slope_angle) in &mut query {
         let is_grounded = hits.iter().any(|hit| {
+            if let Ok(checkpoint) = checkpoints.get(hit.entity) {
+                commands
+                    .entity(*active_checkpoint)
+                    .remove::<ActiveCheckpoint>();
+                commands.entity(checkpoint).insert(ActiveCheckpoint);
+            }
             if let Some(angle) = max_slope_angle {
                 (rotation * -hit.normal2).angle_between(Vector::Y).abs() <= angle.0
             } else {

@@ -1,6 +1,6 @@
 //! The death menu.
 
-use bevy::{input::common_conditions::input_just_pressed, prelude::*, window::CursorOptions};
+use bevy::{prelude::*, window::CursorOptions};
 
 use crate::{
     menus::Menu,
@@ -34,8 +34,7 @@ fn respawn(
 ) {
     set_cursor_grab(&mut cursor_options, true);
 
-    todo!();
-    // next_menu.set(Menu::None);
+    next_menu.set(Menu::None);
 }
 
 fn quit_to_title(_: On<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
