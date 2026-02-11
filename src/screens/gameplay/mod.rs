@@ -118,6 +118,8 @@ pub struct LevelAssets {
     whoosh1: Handle<AudioSample>,
     #[dependency]
     cube: Handle<Scene>,
+    #[dependency]
+    props: Handle<Scene>,
 }
 
 impl FromWorld for LevelAssets {
@@ -128,6 +130,7 @@ impl FromWorld for LevelAssets {
             step1: assets.load("audio/sound_effects/step1.wav"),
             whoosh1: assets.load("audio/sound_effects/whoosh1.wav"),
             cube: assets.load(GltfAssetLabel::Scene(0).from_asset("models/scene.glb")),
+            props: assets.load(GltfAssetLabel::Scene(0).from_asset("models/props.glb")),
         }
     }
 }
@@ -244,6 +247,9 @@ fn spawn_level(
         .add_children(&[player, light, music])
         .id();
 
+    // todo: remove
+    commands.spawn(SceneRoot(level_assets.props.clone()));
+    
     commands.queue(enemy::EnemySpawnCmd {
         pos: Isometry3d::from_translation(vec3(0.0, 0.9, 5.0)),
         parent: Some(level),
