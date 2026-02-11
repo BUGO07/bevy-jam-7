@@ -29,7 +29,7 @@ bevy = { version = "0.18.0", default-features = false, features = [
   "std",
   "sysinfo_plugin",
   "wayland",
-  "webgl2",
+  "webgpu",
   "x11",
 ] }
 bevy-inspector-egui = "0.36.0"
