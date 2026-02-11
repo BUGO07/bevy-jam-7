@@ -12,7 +12,7 @@ mod screens;
 mod theme;
 
 use avian3d::prelude::{Physics, PhysicsTime};
-use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy::{asset::AssetMetaCheck, light::GlobalAmbientLight, prelude::*};
 use bevy_skein::SkeinPlugin;
 
 fn main() -> AppExit {
@@ -23,6 +23,12 @@ pub struct AppPlugin;
 
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
+        app
+            // Set black clear color so atmosphere is visible
+            .insert_resource(ClearColor(Color::BLACK))
+            // Disable ambient light - atmosphere will provide lighting
+            .insert_resource(GlobalAmbientLight::NONE);
+
         // Add Bevy plugins.
         app.add_plugins(
             DefaultPlugins

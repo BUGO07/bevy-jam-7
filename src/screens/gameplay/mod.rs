@@ -1,11 +1,21 @@
 //! The screen state for the main gameplay.
 
 use avian3d::{PhysicsPlugins, prelude::*};
-use bevy::{input::common_conditions::input_just_pressed, prelude::*, window::CursorOptions};
+use bevy::{
+    camera::Exposure,
+    core_pipeline::tonemapping::Tonemapping,
+    input::common_conditions::input_just_pressed,
+    light::{AtmosphereEnvironmentMapLight, SunDisk, VolumetricFog},
+    pbr::{Atmosphere, AtmosphereSettings, ScatteringMedium},
+    post_process::bloom::Bloom,
+    prelude::*,
+    window::CursorOptions,
+};
 use bevy_landmass::prelude::*;
 use bevy_rerecast::prelude::*;
 use bevy_seedling::sample::AudioSample;
 use landmass_rerecast::{Island3dBundle, LandmassRerecastPlugin, NavMeshHandle3d};
+use std::f32::consts::PI;
 
 use crate::{
     Pause,
@@ -89,6 +99,10 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         generate_navmesh.run_if(in_state(Screen::Gameplay)), //.run_if(input_just_pressed(KeyCode::Space)),
     );
+    app.add_systems(
+        Update,
+        update_sun.run_if(in_state(Screen::Gameplay).and(in_state(Pause(false)))),
+    );
     app.add_observer(handle_navmesh_ready);
 }
 
@@ -136,6 +150,7 @@ fn spawn_level(
     camera: Single<Entity, With<Camera3d>>,
     mut cursor_options: Single<&mut CursorOptions>,
     mut generator: NavmeshGenerator,
+    mut scattering_mediums: ResMut<Assets<ScatteringMedium>>,
 ) {
     commands.insert_resource(NavmeshDone(false));
 
@@ -176,16 +191,26 @@ fn spawn_level(
         .add_child(*camera)
         .id();
 
-    commands
-        .entity(*camera)
-        .insert(Transform::from_xyz(0.0, 0.8, 0.0));
-
     let music = commands
         .spawn((
             Name::new("Gameplay Music"),
             // music(level_assets.music.clone()),
         ))
         .id();
+
+    // Set camera position and add atmosphere
+    commands.entity(*camera).insert((
+        Transform::from_xyz(0.0, 0.8, 0.0),
+        Atmosphere::earthlike(scattering_mediums.add(ScatteringMedium::default())),
+        AtmosphereSettings::default(),
+        Exposure {
+            ev100: Exposure::EV100_BLENDER,
+        },
+        Tonemapping::AcesFitted,
+        Bloom::NATURAL,
+        AtmosphereEnvironmentMapLight::default(),
+        VolumetricFog::default(),
+    ));
 
     let light = commands
         .spawn((
@@ -194,6 +219,7 @@ fn spawn_level(
                 shadows_enabled: true,
                 ..default()
             },
+            SunDisk::default(),
             Transform::from_rotation(Quat::from_euler(
                 EulerRot::YXZ,
                 -35f32.to_radians(),
@@ -301,3 +327,8 @@ fn handle_navmesh_ready(_: On<NavmeshReady>, mut navmesh_done: ResMut<NavmeshDon
 
 #[derive(Resource)]
 pub struct NavmeshArchipelagoHolder(pub Entity);
+
+fn update_sun(mut suns: Query<&mut Transform, With<DirectionalLight>>, time: Res<Time>) {
+    suns.iter_mut()
+        .for_each(|mut tf| tf.rotate_x(-time.delta_secs() * PI / 100.0));
+}
