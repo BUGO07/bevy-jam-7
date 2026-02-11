@@ -1,14 +1,3 @@
----
-# yaml-language-server: $schema=schemas/page.schema.json
-Object type:
-    - Page
-Backlinks:
-    - puzzles.md
-Creation date: "2026-02-11T09:25:34Z"
-Created by:
-    - Rustic Croissant
-id: bafyreihmzrcuhrxtxnx7yctxcykznfjsre3ywdbs3zme256wyphzdpvr4y
----
 # Seesaw butterfly   
 ## Objects:    
 trash-butterfly. trash is still and boring, butterfly flies around, doesn't stay still by itself unless there are flowers, it flies to them.   
