@@ -10,23 +10,33 @@ use crate::{
     },
 };
 
+use crate::screens::Screen;
+use crate::screens::gameplay::spawn_level;
+
 pub struct CharacterControllerPlugin;
 
 impl Plugin for CharacterControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<MovementAction>().add_systems(
-            Update,
-            (
-                kbm_input,
-                gamepad_input,
-                update_grounded,
-                movement,
-                apply_movement_damping,
-                // ray_cast,
+        app.add_message::<MovementAction>()
+            .add_message::<AttackAction>()
+            .add_systems(
+                OnEnter(Screen::Gameplay),
+                spawn_something_punchable.after(spawn_level),
             )
-                .chain()
-                .in_set(PausableSystems),
-        );
+            .add_systems(
+                Update,
+                (
+                    kbm_input,
+                    gamepad_input,
+                    update_grounded,
+                    movement,
+                    apply_movement_damping,
+                    attack,
+                    // ray_cast,
+                )
+                    .chain()
+                    .in_set(PausableSystems),
+            );
     }
 }
 
@@ -36,6 +46,11 @@ pub enum MovementAction {
     Look(Vec2),
     Dash(Vec2),
     Jump,
+}
+
+#[derive(Message)]
+pub enum AttackAction {
+    Punch(Dir3),
 }
 
 #[derive(Component)]
@@ -127,16 +142,19 @@ impl CharacterControllerBundle {
 
 fn kbm_input(
     mut movement_writer: MessageWriter<MovementAction>,
+    mut attack_writer: MessageWriter<AttackAction>,
     mut mouse_input: MessageReader<MouseMotion>,
-    mut player: Single<&mut Player>,
+    player: Single<(&mut Player, &Transform)>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
+    let (mut player, transform) = player.into_inner();
     let up = keyboard_input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]);
     let down = keyboard_input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]);
     let left = keyboard_input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]);
     let right = keyboard_input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]);
     let shift = keyboard_input.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
     let dash = keyboard_input.just_pressed(KeyCode::KeyR);
+    let punch = keyboard_input.just_pressed(KeyCode::KeyV);
     let damage = keyboard_input.just_pressed(KeyCode::KeyH);
 
     if damage {
@@ -161,6 +179,10 @@ fn kbm_input(
 
     if keyboard_input.just_pressed(KeyCode::Space) {
         movement_writer.write(MovementAction::Jump);
+    }
+
+    if punch {
+        attack_writer.write(AttackAction::Punch(transform.forward()));
     }
 
     for motion in mouse_input.read() {
@@ -315,6 +337,75 @@ fn movement(
     }
     player.dash_cooldown -= time.delta_secs();
     *sound_cooldown -= time.delta_secs();
+}
+
+fn attack(
+    mut attack_reader: MessageReader<AttackAction>,
+    mut commands: Commands,
+    player_transform: Single<&Transform, With<Player>>,
+    mut punchables: Query<(&GlobalTransform, Forces), (With<Collider>, Without<Player>)>,
+    level_assets: Res<LevelAssets>,
+    level: Single<Entity, With<Level>>,
+) {
+    let punch_range = 2.0;
+    let punch_force = 50.0;
+
+    // Right now we only care it's in player forward direction
+    // Consider other ways(maybe ray-cast?) to check if `Punchable` is there
+    let min_dot_product = 0.1;
+
+    for event in attack_reader.read() {
+        match event {
+            AttackAction::Punch(punch_forward) => {
+                for (transform, mut forces) in punchables.iter_mut() {
+                    let entity_pos = transform.translation();
+
+                    let to_object_from_player = entity_pos - (*player_transform).translation;
+                    let distance = to_object_from_player.length();
+
+                    let push_direction = (to_object_from_player
+                        + Vec3 {
+                            y: 0.2,
+                            ..default()
+                        })
+                    .normalize();
+                    let dot_product = punch_forward.dot(push_direction);
+
+                    if distance < punch_range && dot_product > min_dot_product {
+                        let impulse = push_direction * punch_force;
+
+                        forces.apply_linear_impulse(impulse);
+                    }
+                }
+
+                // TODO: punch sound effect
+                commands
+                    .entity(*level)
+                    .with_child(sound_effect(level_assets.whoosh1.clone()));
+            }
+        }
+    }
+}
+
+fn spawn_something_punchable(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    level: Single<Entity, With<Level>>,
+) {
+    let cube = commands
+        .spawn((
+            Name::new("PunchableCube"),
+            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+            MeshMaterial3d(materials.add(Color::srgb(0.8, 0.7, 0.6))),
+            Transform::from_xyz(2.0, 1.5, -3.0),
+            RigidBody::Dynamic,
+            Collider::cuboid(1.0, 1.0, 1.0),
+            Mass(5.0),
+        ))
+        .id();
+
+    commands.entity(*level).add_child(cube);
 }
 
 #[allow(unused)]
