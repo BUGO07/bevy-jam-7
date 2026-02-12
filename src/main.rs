@@ -1,6 +1,5 @@
 // Support configuring Bevy lints within code.
 #![cfg_attr(bevy_lint, feature(register_tool), register_tool(bevy))]
-// Disable console on Windows for non-dev builds.
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
 mod asset_tracking;
@@ -14,9 +13,12 @@ mod theme;
 use avian3d::prelude::{Physics, PhysicsTime};
 use bevy::{asset::AssetMetaCheck, light::GlobalAmbientLight, prelude::*};
 use bevy_skein::SkeinPlugin;
+use bevy_hotpatching_experiments::prelude::*; // <-- import hotpatching
 
 fn main() -> AppExit {
-    App::new().add_plugins(AppPlugin).run()
+    App::new()
+        .add_plugins(AppPlugin)
+        .run()
 }
 
 pub struct AppPlugin;
@@ -33,9 +35,6 @@ impl Plugin for AppPlugin {
         app.add_plugins(
             DefaultPlugins
                 .set(AssetPlugin {
-                    // Wasm builds will check for meta files (that don't exist) if this isn't set.
-                    // This causes errors and even panics on web build on itch.
-                    // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
                     meta_check: AssetMetaCheck::Never,
                     ..default()
                 })
@@ -49,6 +48,10 @@ impl Plugin for AppPlugin {
                     ..default()
                 }),
         );
+
+        // Add hotpatching plugin
+        #[cfg(feature = "dev")]
+        app.add_plugins(SimpleSubsecondPlugin::default());
 
         // Add other plugins.
         app.add_plugins((
@@ -90,27 +93,23 @@ impl Plugin for AppPlugin {
 
         // Spawn the main camera.
         app.add_systems(Startup, spawn_camera);
+
+        // Hotpatching example: greeting function
+        #[cfg(feature = "dev")]
+        app.add_systems(Update, greet);
     }
 }
 
-/// High-level groupings of systems for the app in the `Update` schedule.
-/// When adding a new variant, make sure to order it in the `configure_sets`
-/// call above.
 #[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
 enum AppSystems {
-    /// Tick timers.
     TickTimers,
-    /// Record player input.
     RecordInput,
-    /// Do everything else (consider splitting this into further variants).
     Update,
 }
 
-/// Whether or not the game is paused.
 #[derive(States, Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 struct Pause(pub bool);
 
-/// A system set for systems that shouldn't run while the game is paused.
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
 
@@ -123,4 +122,14 @@ fn spawn_camera(mut commands: Commands) {
             ..default()
         }),
     ));
+}
+
+// hotpachable system example
+#[cfg(feature = "dev")]
+#[hot]
+fn greet(time: Res<Time>) {
+    info_once!(
+        "Hello from a hotpatched system! Patched at t = {} s",
+        time.elapsed_secs()
+    );
 }
