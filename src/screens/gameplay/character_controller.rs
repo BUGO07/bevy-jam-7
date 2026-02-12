@@ -156,8 +156,7 @@ fn kbm_input(
     let down = keyboard_input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]);
     let left = keyboard_input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]);
     let right = keyboard_input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]);
-    let shift = keyboard_input.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
-    let dash = keyboard_input.just_pressed(KeyCode::KeyR);
+    let dash = keyboard_input.just_pressed(KeyCode::ShiftLeft);
     let punch = keyboard_input.just_pressed(KeyCode::KeyV);
     let damage = keyboard_input.just_pressed(KeyCode::KeyH);
 
@@ -172,12 +171,9 @@ fn kbm_input(
     if direction != Vec2::ZERO {
         if dash && player.dash_cooldown <= 0.0 {
             player.dash_cooldown = 1.5;
-            movement_writer.write(MovementAction::Dash(direction * 200.0));
+            movement_writer.write(MovementAction::Dash(direction * 500.0));
         } else {
-            movement_writer.write(MovementAction::Move(
-                direction,
-                if shift && direction.y > 0.0 { 1.5 } else { 1.0 },
-            ));
+            movement_writer.write(MovementAction::Move(direction, 1.0));
         }
     }
 
@@ -314,6 +310,7 @@ fn movement(
                     let local_z = transform.rotation * Vec3::Z;
                     let forward = -Vec3::new(local_z.x, 0.0, local_z.z).normalize_or_zero();
                     let right = Vec3::new(local_z.z, 0.0, -local_z.x).normalize_or_zero();
+                    linear_velocity.0.y = 0.0; // reset y velocity so dash is consistent even if you're falling
                     let movement_direction =
                         forward * direction.y + right * direction.x + Vec3::Y * 10.0;
                     linear_velocity.0 += movement_direction * movement_acceleration.0 * 0.1;
