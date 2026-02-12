@@ -298,8 +298,6 @@ fn movement(
                     linear_velocity.0 +=
                         movement_direction * movement_acceleration.0 * speed_multiplier;
 
-                    info!("linvel sq: {}", linear_velocity.length_squared());
-
                     let length =
                         movement_direction.length() * movement_acceleration.0 * speed_multiplier;
                     if is_grounded && length > 0.05 && *sound_cooldown <= 0.0 {
