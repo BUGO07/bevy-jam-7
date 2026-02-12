@@ -13,12 +13,9 @@ mod theme;
 use avian3d::prelude::{Physics, PhysicsTime};
 use bevy::{asset::AssetMetaCheck, light::GlobalAmbientLight, prelude::*};
 use bevy_skein::SkeinPlugin;
-use bevy_hotpatching_experiments::prelude::*; // <-- import hotpatching
 
 fn main() -> AppExit {
-    App::new()
-        .add_plugins(AppPlugin)
-        .run()
+    App::new().add_plugins(AppPlugin).run()
 }
 
 pub struct AppPlugin;
@@ -48,10 +45,6 @@ impl Plugin for AppPlugin {
                     ..default()
                 }),
         );
-
-        // Add hotpatching plugin
-        #[cfg(feature = "dev")]
-        app.add_plugins(SimpleSubsecondPlugin::default());
 
         // Add other plugins.
         app.add_plugins((
@@ -93,10 +86,6 @@ impl Plugin for AppPlugin {
 
         // Spawn the main camera.
         app.add_systems(Startup, spawn_camera);
-
-        // Hotpatching example: greeting function
-        #[cfg(feature = "dev")]
-        app.add_systems(Update, greet);
     }
 }
 
@@ -122,14 +111,4 @@ fn spawn_camera(mut commands: Commands) {
             ..default()
         }),
     ));
-}
-
-// hotpachable system example
-#[cfg(feature = "dev")]
-#[hot]
-fn greet(time: Res<Time>) {
-    info_once!(
-        "Hello from a hotpatched system! Patched at t = {} s",
-        time.elapsed_secs()
-    );
 }
