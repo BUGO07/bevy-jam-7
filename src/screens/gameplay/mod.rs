@@ -1,7 +1,8 @@
 //! The screen state for the main gameplay.
 
-use avian3d::{PhysicsPlugins, prelude::*};
+use avian3d::prelude::*;
 use bevy::{
+    anti_alias::fxaa::Fxaa,
     camera::Exposure,
     core_pipeline::tonemapping::Tonemapping,
     input::common_conditions::input_just_pressed,
@@ -21,40 +22,16 @@ use crate::{
     Pause,
     asset_tracking::LoadResource,
     menus::Menu,
-    screens::{Screen, gameplay::character_controller::CharacterControllerBundle, set_cursor_grab},
+    screens::{Screen, gameplay::player::Player, set_cursor_grab},
 };
 
 mod character_controller;
 mod checkpoints;
 mod enemy;
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Reflect)]
-#[reflect(Component)]
-pub struct Player {
-    // normalized values (0.0..1.0)
-    health: f32,
-    hallucination_severity: f32,
-    dash_cooldown: f32,
-}
+mod player;
 
 #[derive(Component)]
 struct Level;
-
-impl Default for Player {
-    fn default() -> Self {
-        Self {
-            health: 1.0,
-            hallucination_severity: 0.0,
-            dash_cooldown: 0.0,
-        }
-    }
-}
-
-impl Player {
-    fn is_alive(&self) -> bool {
-        self.health > 0.0
-    }
-}
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -117,6 +94,8 @@ pub struct LevelAssets {
     whoosh1: Handle<AudioSample>,
     #[dependency]
     cube: Handle<Scene>,
+    #[dependency]
+    props: Handle<Scene>,
 }
 
 impl FromWorld for LevelAssets {
@@ -127,6 +106,7 @@ impl FromWorld for LevelAssets {
             step1: assets.load("audio/sound_effects/step1.wav"),
             whoosh1: assets.load("audio/sound_effects/whoosh1.wav"),
             cube: assets.load(GltfAssetLabel::Scene(0).from_asset("models/scene.glb")),
+            props: assets.load(GltfAssetLabel::Scene(0).from_asset("models/props.glb")),
         }
     }
 }
@@ -153,6 +133,7 @@ fn spawn_level(
     mut scattering_mediums: ResMut<Assets<ScatteringMedium>>,
 ) {
     commands.insert_resource(NavmeshDone(false));
+    let camera = *camera;
 
     let archipelago_options: ArchipelagoOptions<ThreeD> =
         ArchipelagoOptions::from_agent_radius(0.5);
@@ -173,23 +154,7 @@ fn spawn_level(
     commands.insert_resource(NavmeshArchipelagoHolder(archipelago_id));
 
     set_cursor_grab(&mut cursor_options, true);
-    let player = commands
-        .spawn((
-            Name::new("Player"),
-            CharacterControllerBundle::new(Collider::capsule(0.4, 1.0)).with_movement(
-                5.0,
-                0.90,
-                7.0,
-                35f32.to_radians(),
-            ),
-            Friction::ZERO.with_combine_rule(CoefficientCombine::Min),
-            Restitution::ZERO.with_combine_rule(CoefficientCombine::Min),
-            GravityScale(2.0),
-            Transform::from_xyz(0.0, 1.8, 2.0),
-            Player::default(),
-        ))
-        .add_child(*camera)
-        .id();
+    let player = player::spawn_player(&mut commands, camera);
 
     let music = commands
         .spawn((
@@ -199,8 +164,8 @@ fn spawn_level(
         .id();
 
     // Set camera position and add atmosphere
-    commands.entity(*camera).insert((
-        Transform::from_xyz(0.0, 0.8, 0.0),
+    commands.entity(camera).insert((
+        Transform::from_xyz(0.0, 0.8 + 0.9, 0.0),
         Atmosphere::earthlike(scattering_mediums.add(ScatteringMedium::default())),
         AtmosphereSettings::default(),
         Exposure {
@@ -210,6 +175,8 @@ fn spawn_level(
         Bloom::NATURAL,
         AtmosphereEnvironmentMapLight::default(),
         VolumetricFog::default(),
+        Msaa::Off,
+        Fxaa::default(),
     ));
 
     let light = commands
@@ -241,12 +208,15 @@ fn spawn_level(
         .add_children(&[player, light, music])
         .id();
 
+    // todo: remove
+    commands.spawn(SceneRoot(level_assets.props.clone()));
+
     commands.queue(enemy::EnemySpawnCmd {
-        pos: Isometry3d::from_translation(vec3(0.0, 0.9, 5.0)),
+        pos: Isometry3d::from_translation(vec3(0.0, 0.0, 5.0)),
         parent: Some(level),
     });
     commands.queue(enemy::EnemySpawnCmd {
-        pos: Isometry3d::from_translation(vec3(4.0, 0.9, 5.0)),
+        pos: Isometry3d::from_translation(vec3(4.0, 0.0, 5.0)),
         parent: Some(level),
     });
 }

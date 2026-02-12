@@ -61,10 +61,12 @@ fn spawn_enemy(
             },
         },
         AgentTarget3d::None,
-        Mesh3d(meshes.add(Capsule3d::new(0.4, 1.0))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(255, 144, 124))),
-        Collider::capsule(0.4, 1.0),
-        // AgentTarget3d::Point(vec3(0.0, 0.0, 0.0)),
+        Children::spawn_one((
+            Mesh3d(meshes.add(Capsule3d::new(0.4, 1.0))),
+            MeshMaterial3d(materials.add(Color::srgb_u8(255, 144, 124))),
+            Collider::capsule(0.4, 1.0),
+            Transform::from_xyz(0.0, 0.9, 0.0),
+        )),
     ));
 
     if let Some(parent) = args.parent {
