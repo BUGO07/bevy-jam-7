@@ -1,6 +1,7 @@
 use avian3d::prelude::*;
 use bevy::{ecs::query::Has, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
 
+use super::enemy::{Enemy, Knockback};
 use crate::{
     PausableSystems,
     audio::sound_effect,
@@ -347,38 +348,63 @@ fn attack(
     mut attack_reader: MessageReader<AttackAction>,
     mut commands: Commands,
     player_transform: Single<&Transform, With<Player>>,
-    mut punchables: Query<(&GlobalTransform, Forces), (With<Collider>, Without<Player>)>,
+    mut punchables: Query<
+        (&GlobalTransform, Forces),
+        (With<Collider>, Without<Player>, Without<Enemy>),
+    >,
+    mut enemies: Query<(Entity, &GlobalTransform), With<Enemy>>,
     level_assets: Res<LevelAssets>,
     level: Single<Entity, With<Level>>,
 ) {
-    let punch_range = 2.0;
-    let punch_force = 50.0;
+    fn punch_impulse(
+        target_transform: &GlobalTransform,
+        player_transform: &Transform,
+        punch_forward: &Dir3,
+    ) -> Option<Vec3> {
+        const PUNCH_RANGE: f32 = 2.0;
+        const PUNCH_FORCE: f32 = 15.0;
+        // Right now we only care it's in player forward direction
+        // Consider other ways(maybe ray-cast?) to check if `Punchable` is there
+        const MIN_DOT_PRODUCT: f32 = 0.1;
 
-    // Right now we only care it's in player forward direction
-    // Consider other ways(maybe ray-cast?) to check if `Punchable` is there
-    let min_dot_product = 0.1;
+        let target_pos = target_transform.translation();
+
+        let to_object_from_player = target_pos - (*player_transform).translation;
+        let distance = to_object_from_player.length();
+
+        let push_direction = (to_object_from_player
+            + Vec3 {
+                y: 0.2,
+                ..default()
+            })
+        .normalize();
+        let dot_product = punch_forward.dot(push_direction);
+        if distance < PUNCH_RANGE && dot_product > MIN_DOT_PRODUCT {
+            Some(push_direction * PUNCH_FORCE)
+        } else {
+            None
+        }
+    }
 
     for event in attack_reader.read() {
         match event {
             AttackAction::Punch(punch_forward) => {
                 for (transform, mut forces) in punchables.iter_mut() {
-                    let entity_pos = transform.translation();
-
-                    let to_object_from_player = entity_pos - (*player_transform).translation;
-                    let distance = to_object_from_player.length();
-
-                    let push_direction = (to_object_from_player
-                        + Vec3 {
-                            y: 0.2,
-                            ..default()
-                        })
-                    .normalize();
-                    let dot_product = punch_forward.dot(push_direction);
-
-                    if distance < punch_range && dot_product > min_dot_product {
-                        let impulse = push_direction * punch_force;
-
+                    if let Some(impulse) =
+                        punch_impulse(transform, *player_transform, punch_forward)
+                    {
                         forces.apply_linear_impulse(impulse);
+                    }
+                }
+
+                for (entity, transform) in enemies.iter_mut() {
+                    if let Some(impulse) =
+                        punch_impulse(transform, *player_transform, punch_forward)
+                    {
+                        commands.entity(entity).insert(Knockback {
+                            velocity: impulse,
+                            remaining_time: 0.3,
+                        });
                     }
                 }
 
