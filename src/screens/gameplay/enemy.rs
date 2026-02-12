@@ -1,6 +1,8 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use bevy_landmass::prelude::*;
+use bevy_landmass::{PointSampleDistance3d, prelude::*};
+
+use crate::screens::Screen;
 
 pub struct EnemyPlugin;
 
@@ -8,7 +10,9 @@ impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (enemy_track_nearby_player, enemy_move_toward_target).chain(),
+            (enemy_track_nearby_player, enemy_move_toward_target)
+                .chain()
+                .run_if(in_state(Screen::Gameplay)),
         );
 
         // #[cfg(feature = "dev")]
@@ -87,8 +91,21 @@ fn spawn_enemy(
 fn enemy_track_nearby_player(
     mut enemies: Query<(&Transform, &mut AgentTarget3d), With<Enemy>>,
     players: Query<(Entity, &Transform), With<super::Player>>,
+    archipelago: Query<&Archipelago3d>,
 ) {
     const DETECTION_RANGE: f32 = 5.0;
+
+    const POINT_SAMPLE_CONFIG: PointSampleDistance3d = PointSampleDistance3d {
+        animation_link_max_vertical_distance: 50.,
+        distance_above: 50.,
+        distance_below: 50.,
+        horizontal_distance: 50.,
+        vertical_preference_ratio: 1.0,
+    };
+
+    let Some(archipelago) = archipelago.iter().next() else {
+        return;
+    };
 
     let Some((player_entity, player_transform)) = players.iter().next() else {
         return;
@@ -100,7 +117,13 @@ fn enemy_track_nearby_player(
             .distance(player_transform.translation);
 
         if distance <= DETECTION_RANGE {
-            *target = AgentTarget3d::Entity(player_entity);
+            if let Ok(point) =
+                archipelago.sample_point(player_transform.translation, &POINT_SAMPLE_CONFIG)
+            {
+                *target = AgentTarget3d::Point(point.point());
+            } else {
+                *target = AgentTarget3d::Entity(player_entity);
+            }
         } else {
             *target = AgentTarget3d::None;
         }
@@ -110,11 +133,7 @@ fn enemy_track_nearby_player(
 fn enemy_move_toward_target(
     mut enemies: Query<(&AgentTarget3d, &AgentDesiredVelocity3d, &mut LinearVelocity), With<Enemy>>,
 ) {
-    for (target, desired_velocity, mut linear_velocity) in enemies.iter_mut() {
-        if matches!(target, AgentTarget3d::Entity(_)) {
-            linear_velocity.0 = desired_velocity.velocity();
-        } else {
-            linear_velocity.0 = Vec3::ZERO;
-        }
+    for (_target, desired_velocity, mut linear_velocity) in enemies.iter_mut() {
+        linear_velocity.0 = desired_velocity.velocity();
     }
 }
