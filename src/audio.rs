@@ -35,7 +35,10 @@ pub struct SoundEffect;
 
 /// A sound effect audio instance.
 pub fn sound_effect(handle: Handle<AudioSample>) -> impl Bundle {
-    (SamplePlayer::new(handle), SoundEffect)
+    (
+        SamplePlayer::new(handle).with_volume(bevy_seedling::prelude::Volume::Decibels(-16.0)),
+        SoundEffect,
+    )
 }
 
 // [`GlobalVolume`] doesn't apply to already-running audio entities, so this system will update them.

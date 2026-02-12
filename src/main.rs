@@ -115,5 +115,12 @@ struct Pause(pub bool);
 struct PausableSystems;
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera3d::default()));
+    commands.spawn((
+        Name::new("Camera"),
+        Camera3d::default(),
+        Projection::from(PerspectiveProjection {
+            fov: 90.0_f32.to_radians(),
+            ..default()
+        }),
+    ));
 }

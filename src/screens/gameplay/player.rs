@@ -36,14 +36,14 @@ pub fn spawn_player(commands: &mut Commands, camera: Entity) -> Entity {
         .spawn((
             Name::new("Player"),
             CharacterControllerBundle::new(player_collider.clone()).with_movement(
-                0.5,
+                1.0,
                 0.90,
-                7.0,
+                10.0,
                 35f32.to_radians(),
             ),
             Friction::ZERO.with_combine_rule(CoefficientCombine::Min),
             Restitution::ZERO.with_combine_rule(CoefficientCombine::Min),
-            GravityScale(2.0),
+            GravityScale(1.5),
             Transform::from_xyz(0.0, 0.9, 2.0),
             Player::default(),
             Children::spawn_one((player_collider, Transform::from_xyz(0., 0.9, 0.))),
