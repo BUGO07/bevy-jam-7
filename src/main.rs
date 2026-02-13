@@ -10,6 +10,7 @@ mod dev_tools;
 mod menus;
 mod screens;
 mod theme;
+mod visuals;
 
 use avian3d::prelude::{Physics, PhysicsTime};
 use bevy::{asset::AssetMetaCheck, light::GlobalAmbientLight, prelude::*};
@@ -50,6 +51,7 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
+            visuals::plugin,
             SkeinPlugin::default(),
             bevy_framepace::FramepacePlugin,
         ));
