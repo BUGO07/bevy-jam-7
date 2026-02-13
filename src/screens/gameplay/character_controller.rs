@@ -335,6 +335,7 @@ fn movement(
 
                     transform.rotation = Quat::from_rotation_y(yaw);
                     camera.rotation = Quat::from_rotation_x(pitch);
+                    camera.rotate_local_z(time.elapsed_secs().sin() / 30.0);
                 }
                 MovementAction::Jump => {
                     if is_grounded {
