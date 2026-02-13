@@ -3,10 +3,11 @@
 use avian3d::prelude::{PhysicsDebugPlugin, PhysicsGizmos};
 use bevy::{
     dev_tools::states::log_transitions, input::common_conditions::input_just_pressed, prelude::*,
+    window::CursorOptions,
 };
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 
-use crate::screens::Screen;
+use crate::screens::{Screen, set_cursor_grab};
 
 pub(super) fn plugin(app: &mut App) {
     // Log `Screen` state transitions.
@@ -29,8 +30,14 @@ pub(super) fn plugin(app: &mut App) {
 
 const TOGGLE_KEY: KeyCode = KeyCode::Backquote;
 
-fn toggle_debug_ui(mut options: ResMut<UiDebugOptions>, mut store: ResMut<GizmoConfigStore>) {
+fn toggle_debug_ui(
+    mut options: ResMut<UiDebugOptions>,
+    mut store: ResMut<GizmoConfigStore>,
+    // mut cursor_options: Single<&mut CursorOptions>,
+) {
     options.toggle();
+
+    // set_cursor_grab(&mut cursor_options, !options.enabled);
 
     // physics debug
     let enabled = &mut store.config_mut::<PhysicsGizmos>().0.enabled;

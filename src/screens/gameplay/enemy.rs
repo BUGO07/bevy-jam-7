@@ -112,6 +112,7 @@ fn spawn_enemy(
         )
         .with_max_distance(0.5),
         Children::spawn_one((
+            // todo: remove/reuse mesh
             Mesh3d(meshes.add(Capsule3d::new(0.4, 1.0))),
             SceneRoot(level_assets.hammerhead.clone()),
             MeshMaterial3d(materials.add(Color::srgb_u8(255, 144, 124))),
