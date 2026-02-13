@@ -319,10 +319,9 @@ fn movement(
                     let movement_direction =
                         forward * direction.y + right * direction.x + Vec3::Y * 10.0;
                     linear_velocity.0 += movement_direction * movement_acceleration.0 * 0.1;
-                    commands.entity(*level).with_child(sound_effect(
-                        level_assets.whoosh1.clone(),
-                        sample_effects!(),
-                    ));
+                    commands
+                        .entity(*level)
+                        .with_child(sound_effect(level_assets.whoosh1.clone(), ()));
                 }
                 MovementAction::Look(direction) => {
                     let (mut yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
