@@ -1,5 +1,8 @@
 use avian3d::prelude::*;
-use bevy::{ecs::query::Has, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
+use bevy::{
+    ecs::query::Has, input::mouse::MouseMotion, prelude::*, transform::TransformSystems,
+    window::PrimaryWindow,
+};
 use bevy_seedling::{prelude::LowPassNode, sample_effects};
 
 use super::enemy::{Enemy, Knockback};
@@ -31,13 +34,16 @@ impl Plugin for CharacterControllerPlugin {
                     kbm_input,
                     gamepad_input,
                     update_grounded,
-                    movement,
                     apply_movement_damping,
-                    attack,
                     // ray_cast,
                 )
                     .chain()
                     .in_set(PausableSystems),
+            )
+            .add_systems(FixedUpdate, (movement, attack).in_set(PausableSystems))
+            .add_systems(
+                PostUpdate,
+                update_camera_rotation.before(TransformSystems::Propagate),
             );
     }
 }
@@ -54,6 +60,10 @@ pub enum MovementAction {
 pub enum AttackAction {
     Punch(Dir3),
 }
+
+// Camera x rotation
+#[derive(Component)]
+pub struct CameraRotation(pub f32);
 
 #[derive(Component)]
 pub struct CharacterController;
@@ -274,10 +284,13 @@ fn movement(
         &mut Transform,
         Has<Grounded>,
     )>,
-    mut camera: Single<&mut Transform, (With<Camera3d>, Without<MovementAcceleration>)>,
+    mut camera_rotation: Single<
+        &mut CameraRotation,
+        (With<Camera3d>, Without<MovementAcceleration>),
+    >,
     mut player: Single<&mut Player>,
     level: Single<Entity, With<Level>>,
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     window: Single<&Window, With<PrimaryWindow>>,
     level_assets: Res<LevelAssets>,
     mut sound_cooldown: Local<f32>,
@@ -327,17 +340,14 @@ fn movement(
                 }
                 MovementAction::Look(direction) => {
                     let (mut yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
-                    let (_, mut pitch, _) = camera.rotation.to_euler(EulerRot::YXZ);
+                    let mut pitch = camera_rotation.0;
                     let window_scale = window.height().max(window.width());
 
                     pitch -= (1.2 * direction.y * window_scale / 10_000.0).to_radians();
                     yaw -= (1.2 * direction.x * window_scale / 10_000.0).to_radians();
 
-                    pitch = pitch.clamp(-1.54, 1.54);
-
+                    camera_rotation.0 = pitch.clamp(-1.54, 1.54);
                     transform.rotation = Quat::from_rotation_y(yaw);
-                    camera.rotation = Quat::from_rotation_x(pitch);
-                    camera.rotate_local_z(time.elapsed_secs().sin() / 30.0);
                 }
                 MovementAction::Jump => {
                     if is_grounded {
@@ -349,6 +359,19 @@ fn movement(
     }
     player.dash_cooldown -= time.delta_secs();
     *sound_cooldown -= time.delta_secs();
+}
+
+fn update_camera_rotation(
+    camera: Single<
+        (&CameraRotation, &mut Transform),
+        (With<Camera3d>, Without<CharacterController>),
+    >,
+    time: Res<Time>,
+) {
+    let (camera_rotation, mut camera_transform) = camera.into_inner();
+
+    camera_transform.rotation = Quat::from_rotation_x(camera_rotation.0);
+    camera_transform.rotate_local_z(time.elapsed_secs().sin() / 30.0);
 }
 
 fn attack(

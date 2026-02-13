@@ -1,6 +1,6 @@
 // use crate::screens::gameplay::CoefficientCombine;
 // use avian3d::prelude::CoefficientCombine;
-use avian3d::prelude::{CoefficientCombine, Collider, Friction, GravityScale, Restitution};
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use crate::screens::gameplay::character_controller::CharacterControllerBundle;
@@ -46,6 +46,7 @@ pub fn spawn_player(commands: &mut Commands, camera: Entity) -> Entity {
             GravityScale(1.5),
             Transform::from_xyz(0.0, 0.9, 2.0),
             Player::default(),
+            TransformInterpolation,
             Children::spawn_one((player_collider, Transform::from_xyz(0., 0.9, 0.))),
         ))
         .add_child(camera)

@@ -24,10 +24,8 @@ use crate::{
     menus::Menu,
     screens::{
         Screen,
-        gameplay::{
-            katana::{katana_animation, katana_setup, poor_setup_for_katana_animations},
-            player::Player,
-        },
+        gameplay::katana::{katana_animation, katana_setup, poor_setup_for_katana_animations},
+        gameplay::{character_controller::CameraRotation, player::Player},
         set_cursor_grab,
     },
 };
@@ -184,8 +182,10 @@ fn spawn_level(
         .id();
 
     // Set camera position and add atmosphere
+    let transform = Transform::from_xyz(0.0, 0.8 + 0.9, 0.0);
     commands.entity(camera).insert((
-        Transform::from_xyz(0.0, 0.8 + 0.9, 0.0),
+        transform,
+        CameraRotation(transform.rotation.x),
         Atmosphere::earthlike(scattering_mediums.add(ScatteringMedium::default())),
         AtmosphereSettings::default(),
         Exposure {
