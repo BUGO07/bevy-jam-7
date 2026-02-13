@@ -56,6 +56,7 @@ impl Plugin for AppPlugin {
             screens::plugin,
             theme::plugin,
             SkeinPlugin::default(),
+            bevy_framepace::FramepacePlugin,
         ));
 
         // Order new `AppSystems` variants by adding them here:
