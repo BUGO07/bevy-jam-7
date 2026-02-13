@@ -1,6 +1,7 @@
 // Support configuring Bevy lints within code.
 #![cfg_attr(bevy_lint, feature(register_tool), register_tool(bevy))]
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
+#![allow(unused_imports)]
 
 mod asset_tracking;
 mod audio;
