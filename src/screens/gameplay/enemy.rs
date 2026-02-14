@@ -1,5 +1,8 @@
+use std::time::Duration;
+
 use avian3d::{math::*, prelude::*};
 use bevy::prelude::*;
+use bevy::time::common_conditions::on_timer;
 use bevy_landmass::{PointSampleDistance3d, prelude::*};
 
 use crate::screens::Screen;
@@ -28,6 +31,7 @@ impl Plugin for EnemyPlugin {
                 apply_knockback,
                 update_grounded,
                 apply_gravity,
+                print_desired_velocity.run_if(on_timer(Duration::from_millis(300))),
             )
                 .chain()
                 .run_if(in_state(Screen::Gameplay)),
@@ -98,9 +102,9 @@ fn spawn_enemy(
             agent: default(),
             archipelago_ref: ArchipelagoRef3d::new(navmesh_ref.0),
             settings: AgentSettings {
-                radius: 2.0,
-                desired_speed: 1.0,
-                max_speed: 2.0,
+                radius: 1.0,
+                desired_speed: 3.0,
+                max_speed: 4.0,
             },
         },
         AgentTarget3d::None,
@@ -125,15 +129,15 @@ fn spawn_enemy(
     }
 }
 
-// fn print_desired_velocity(query: Query<(Entity, &AgentDesiredVelocity3d, &AgentState)>) {
-//     for (entity, desired_velocity, s) in query.iter() {
-//         println!(
-//             "entity={:?}, desired_velocity={} {s:?}",
-//             entity,
-//             desired_velocity.velocity()
-//         );
-//     }
-// }
+fn print_desired_velocity(query: Query<(Entity, &AgentDesiredVelocity3d, &AgentState)>) {
+    for (entity, desired_velocity, s) in query.iter() {
+        debug!(
+            "entity={:?}, desired_velocity={} {s:?}",
+            entity,
+            desired_velocity.velocity()
+        );
+    }
+}
 
 fn enemy_track_nearby_player(
     mut enemies: Query<(&Transform, &mut AgentTarget3d), With<Enemy>>,
@@ -179,17 +183,29 @@ fn enemy_track_nearby_player(
 
 fn enemy_move_toward_target(
     mut enemies: Query<
-        (&AgentTarget3d, &AgentDesiredVelocity3d, &mut LinearVelocity),
+        (
+            &AgentState,
+            &AgentTarget3d,
+            &AgentDesiredVelocity3d,
+            &mut LinearVelocity,
+            &mut Rotation,
+        ),
         (With<Enemy>, Without<Knockback>),
     >,
 ) {
-    for (target, desired_velocity, mut linear_velocity) in enemies.iter_mut() {
-        if matches!(target, AgentTarget3d::Entity(_)) {
-            linear_velocity.0 = desired_velocity.velocity();
-        } else {
+    for (state, target, desired_velocity, mut linear_velocity, mut rotation) in enemies.iter_mut() {
+        if *state != AgentState::Moving {
             linear_velocity.x = 0.0;
             linear_velocity.z = 0.0;
-            // Skip zeroing falling
+            return;
+        }
+        if !matches!(target, AgentTarget3d::None) {
+            linear_velocity.0 = desired_velocity.velocity();
+
+            // jumpy
+            *rotation =
+                Quat::from_rotation_y(PI / 2.0 - desired_velocity.velocity().xz().to_angle())
+                    .into();
         }
     }
 }

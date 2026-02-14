@@ -46,7 +46,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         PhysicsPlugins::default(),
         bevy_landmass::Landmass3dPlugin::default(),
-        // bevy_landmass::debug::Landmass3dDebugPlugin::default(),
+        bevy_landmass::debug::Landmass3dDebugPlugin::default(),
         bevy_rerecast::NavmeshPlugins::default(),
         avian_rerecast::AvianBackendPlugin::default(),
         LandmassRerecastPlugin::default(),
