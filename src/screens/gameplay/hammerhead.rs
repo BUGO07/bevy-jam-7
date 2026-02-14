@@ -29,8 +29,9 @@ impl HammerheadAssets {
             scene: assets.load(GltfAssetLabel::Scene(0).from_asset(HAMMERHEAD)),
             animations: vec![
                 // asset_server.load(GltfAssetLabel::Animation(2).from_asset(HAMMERHEAD)),
-                assets.load(GltfAssetLabel::Animation(1).from_asset(HAMMERHEAD)),
                 assets.load(GltfAssetLabel::Animation(0).from_asset(HAMMERHEAD)),
+                assets.load(GltfAssetLabel::Animation(1).from_asset(HAMMERHEAD)),
+                assets.load(GltfAssetLabel::Animation(1).from_asset("models/hammerhead walks.glb")),
             ],
         }
     }
