@@ -110,11 +110,12 @@ pub struct LevelAssets {
     step1: Handle<AudioSample>,
     #[dependency]
     whoosh1: Handle<AudioSample>,
+    // #[dependency]
+    // test_scene: Handle<Scene>,
+    // #[dependency]
+    // props: Handle<Scene>,
     #[dependency]
-    test_scene: Handle<Scene>,
-    #[dependency]
-    props: Handle<Scene>,
-
+    demo_level: Handle<Scene>,
     #[dependency]
     skybox: Handle<Image>,
 
@@ -138,12 +139,16 @@ impl FromWorld for LevelAssets {
             music: assets.load("audio/music/Fluffing A Duck.ogg"),
             step1: assets.load("audio/sound_effects/step1.wav"),
             whoosh1: assets.load("audio/sound_effects/whoosh1.wav"),
-            test_scene: assets.load(GltfAssetLabel::Scene(0).from_asset("models/scene.glb")),
-            props: assets.load(GltfAssetLabel::Scene(0).from_asset("models/props.glb")),
+            // test_scene: assets.load(GltfAssetLabel::Scene(0).from_asset("models/scene.glb")),
+            // props: assets.load(GltfAssetLabel::Scene(0).from_asset("models/props.glb")),
             skybox: assets.load("images/skybox.ktx2"),
             katana_idle: assets.load(GltfAssetLabel::Animation(0).from_asset("models/katana.glb")),
             katana_swing: assets.load(GltfAssetLabel::Animation(1).from_asset("models/katana.glb")),
             katana_scene: assets.load(GltfAssetLabel::Scene(0).from_asset("models/katana.glb")),
+            hammerhead: assets.load(GltfAssetLabel::Scene(0).from_asset("models/hammerhead.glb")),
+            //Scene 1 World Scene0 Props
+            demo_level: assets.load(GltfAssetLabel::Scene(1).from_asset("models/Demo_level_heaven_sword.glb")),
+
             hammerhead: HammerheadAssets::load(assets),
         }
     }
@@ -229,16 +234,16 @@ fn spawn_level(
         .id();
 
     let level = commands
-        .spawn((
-            Name::new("Level"),
-            Transform::default(),
-            Visibility::default(),
-            DespawnOnExit(Screen::Gameplay),
-            SceneRoot(level_assets.test_scene.clone()),
-            Level,
-        ))
-        .add_children(&[player, light, music])
-        .id();
+           .spawn((
+               Name::new("Level"),
+               Transform::default(),
+               Visibility::default(),
+               DespawnOnExit(Screen::Gameplay),
+               SceneRoot(level_assets.demo_level.clone()),
+               Level,
+           ))
+           .add_children(&[player, light, music])
+           .id();
 
     // todo: remove
     // commands.spawn(SceneRoot(level_assets.props.clone()));
