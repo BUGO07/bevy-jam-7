@@ -22,8 +22,12 @@ use crate::{
     menus::Menu,
     screens::{
         Screen,
-        gameplay::katana::{katana_animation, katana_setup, poor_setup_for_katana_animations},
-        gameplay::{character_controller::CameraRotation, player::Player},
+        gameplay::{
+            character_controller::CameraRotation,
+            hammerhead::HammerheadAssets,
+            katana::{katana_animation, katana_setup, poor_setup_for_katana_animations},
+            player::Player,
+        },
         set_cursor_grab,
     },
 };
@@ -31,6 +35,7 @@ use crate::{
 mod character_controller;
 mod checkpoints;
 mod enemy;
+mod hammerhead;
 mod katana;
 mod player;
 
@@ -41,13 +46,14 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         PhysicsPlugins::default(),
         bevy_landmass::Landmass3dPlugin::default(),
-        // bevy_landmass::debug::Landmass3dDebugPlugin::default(),
+        bevy_landmass::debug::Landmass3dDebugPlugin::default(),
         bevy_rerecast::NavmeshPlugins::default(),
         avian_rerecast::AvianBackendPlugin::default(),
         LandmassRerecastPlugin::default(),
         character_controller::CharacterControllerPlugin,
         enemy::EnemyPlugin,
         checkpoints::CheckpointPlugin,
+        hammerhead::hammerhead,
     ));
     app.load_resource::<LevelAssets>();
     app.add_systems(
@@ -79,6 +85,7 @@ pub(super) fn plugin(app: &mut App) {
         unpause.run_if(in_state(Screen::Gameplay)),
     );
 
+    // todo: system ordering is likely incorrect and use FIXED UPDATE here.
     app.add_systems(
         Update,
         generate_navmesh.run_if(in_state(Screen::Gameplay)), //.run_if(input_just_pressed(KeyCode::Space)),
@@ -122,7 +129,7 @@ pub struct LevelAssets {
 
     // todo: move?
     #[dependency]
-    hammerhead: Handle<Scene>,
+    hammerhead: HammerheadAssets,
 }
 
 impl FromWorld for LevelAssets {
@@ -142,6 +149,7 @@ impl FromWorld for LevelAssets {
             //Scene 1 World Scene0 Props
             demo_level: assets.load(GltfAssetLabel::Scene(1).from_asset("models/Demo_level_heaven_sword.glb")),
 
+            hammerhead: HammerheadAssets::load(assets),
         }
     }
 }
@@ -244,10 +252,10 @@ fn spawn_level(
         pos: Isometry3d::from_translation(vec3(0.0, 0.0, 5.0)),
         parent: Some(level),
     });
-    commands.queue(enemy::EnemySpawnCmd {
-        pos: Isometry3d::from_translation(vec3(4.0, 0.0, 5.0)),
-        parent: Some(level),
-    });
+    // commands.queue(enemy::EnemySpawnCmd {
+    //     pos: Isometry3d::from_translation(vec3(4.0, 0.0, 5.0)),
+    //     parent: Some(level),
+    // });
 }
 
 fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
@@ -288,8 +296,11 @@ fn generate_navmesh(
     if navmesh_done.0 {
         return;
     }
+    info!("generating navmesh...");
 
+    let mut count = 0;
     for island in &island {
+        count += 1;
         generator.regenerate(
             &island.0,
             NavmeshSettings {
@@ -298,12 +309,15 @@ fn generate_navmesh(
             },
         );
     }
+
+    info!("regenerated for {count} islands");
 }
 
 #[derive(Resource)]
 struct NavmeshDone(bool);
 
 fn handle_navmesh_ready(_: On<NavmeshReady>, mut navmesh_done: ResMut<NavmeshDone>) {
+    info!("navmesh ready");
     navmesh_done.0 = true;
 }
 
