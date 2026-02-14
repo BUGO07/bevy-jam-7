@@ -22,8 +22,12 @@ use crate::{
     menus::Menu,
     screens::{
         Screen,
-        gameplay::katana::{katana_animation, katana_setup, poor_setup_for_katana_animations},
-        gameplay::{character_controller::CameraRotation, player::Player},
+        gameplay::{
+            character_controller::CameraRotation,
+            hammerhead::HammerheadAssets,
+            katana::{katana_animation, katana_setup, poor_setup_for_katana_animations},
+            player::Player,
+        },
         set_cursor_grab,
     },
 };
@@ -81,6 +85,7 @@ pub(super) fn plugin(app: &mut App) {
         unpause.run_if(in_state(Screen::Gameplay)),
     );
 
+    // todo: system ordering is likely incorrect and use FIXED UPDATE here.
     app.add_systems(
         Update,
         generate_navmesh.run_if(in_state(Screen::Gameplay)), //.run_if(input_just_pressed(KeyCode::Space)),
@@ -123,7 +128,7 @@ pub struct LevelAssets {
 
     // todo: move?
     #[dependency]
-    hammerhead: Handle<Scene>,
+    hammerhead: HammerheadAssets,
 }
 
 impl FromWorld for LevelAssets {
@@ -139,7 +144,7 @@ impl FromWorld for LevelAssets {
             katana_idle: assets.load(GltfAssetLabel::Animation(0).from_asset("models/katana.glb")),
             katana_swing: assets.load(GltfAssetLabel::Animation(1).from_asset("models/katana.glb")),
             katana_scene: assets.load(GltfAssetLabel::Scene(0).from_asset("models/katana.glb")),
-            hammerhead: assets.load(GltfAssetLabel::Scene(0).from_asset("models/hammerhead.glb")),
+            hammerhead: HammerheadAssets::load(assets),
         }
     }
 }

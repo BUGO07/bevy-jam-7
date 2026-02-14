@@ -80,7 +80,6 @@ fn spawn_enemy(
     In(args): In<EnemySpawnCmd>,
     mut c: Commands,
     level_assets: Res<LevelAssets>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     navmesh_ref: Res<super::NavmeshArchipelagoHolder>,
 ) {
@@ -91,7 +90,7 @@ fn spawn_enemy(
     let mut enemy = c.spawn((
         Name::new("Enemy"),
         Enemy,
-        SceneRoot(level_assets.hammerhead.clone()),
+        SceneRoot(level_assets.hammerhead.scene.clone()),
         Transform::from_isometry(args.pos),
         Visibility::Inherited,
         RigidBody::Kinematic,

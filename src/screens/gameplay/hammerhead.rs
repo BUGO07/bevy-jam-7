@@ -1,13 +1,39 @@
 use std::{f32::consts::PI, time::Duration};
 
-use bevy::{animation::RepeatAnimation, light::CascadeShadowConfigBuilder, prelude::*};
+use bevy::{animation::RepeatAnimation, prelude::*};
+
+use crate::screens::{Screen, gameplay::LevelAssets};
 
 const HAMMERHEAD: &str = "models/hammerhead.glb";
 
 pub fn hammerhead(app: &mut App) {
-    app.add_systems(Startup, setup)
-        .add_systems(Update, setup_scene_once_loaded)
-        .add_systems(Update, keyboard_control);
+    app.add_systems(OnEnter(Screen::Gameplay), setup)
+        .add_systems(
+            Update,
+            (setup_scene_once_loaded, keyboard_control).run_if(in_state(Screen::Gameplay)),
+        );
+}
+
+#[derive(Asset, Clone, Reflect)]
+pub struct HammerheadAssets {
+    #[dependency]
+    pub scene: Handle<Scene>,
+
+    #[dependency]
+    pub animations: Vec<Handle<AnimationClip>>,
+}
+
+impl HammerheadAssets {
+    pub fn load(assets: &AssetServer) -> Self {
+        Self {
+            scene: assets.load(GltfAssetLabel::Scene(0).from_asset(HAMMERHEAD)),
+            animations: vec![
+                // asset_server.load(GltfAssetLabel::Animation(2).from_asset(HAMMERHEAD)),
+                assets.load(GltfAssetLabel::Animation(1).from_asset(HAMMERHEAD)),
+                assets.load(GltfAssetLabel::Animation(0).from_asset(HAMMERHEAD)),
+            ],
+        }
+    }
 }
 
 #[derive(Resource)]
@@ -19,16 +45,16 @@ struct HammerheadAnimations {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    // mut meshes: ResMut<Assets<Mesh>>,
-    // mut materials: ResMut<Assets<StandardMaterial>>,
+    level_assets: Res<LevelAssets>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
 ) {
+    commands.spawn(SceneRoot(
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset(HAMMERHEAD)),
+    ));
+
     // Build the animation graph
-    let (graph, node_indices) = AnimationGraph::from_clips([
-        // asset_server.load(GltfAssetLabel::Animation(2).from_asset(HAMMERHEAD)),
-        asset_server.load(GltfAssetLabel::Animation(1).from_asset(HAMMERHEAD)),
-        asset_server.load(GltfAssetLabel::Animation(0).from_asset(HAMMERHEAD)),
-    ]);
+    let (graph, node_indices) =
+        AnimationGraph::from_clips(level_assets.hammerhead.animations.clone());
 
     // Keep our animation graph in a Resource so that it can be inserted onto
     // the correct entity once the scene actually loads.
@@ -37,10 +63,6 @@ fn setup(
         animations: node_indices,
         graph_handle,
     });
-
-    commands.spawn(SceneRoot(
-        asset_server.load(GltfAssetLabel::Scene(0).from_asset(HAMMERHEAD)),
-    ));
 
     // Instructions
 
@@ -70,6 +92,8 @@ fn setup_scene_once_loaded(
     mut players: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
 ) {
     for (entity, mut player) in &mut players {
+        info!("setting up scene once loaded...");
+
         let mut transitions = AnimationTransitions::new();
 
         // Make sure to start the animation via the `AnimationTransitions`
