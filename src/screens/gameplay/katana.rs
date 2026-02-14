@@ -12,6 +12,10 @@ pub struct Animations {
     graph_handle: Handle<AnimationGraph>,
 }
 
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct Katana;
+
 pub fn katana_setup(
     mut commands: Commands,
     mut graphs: ResMut<Assets<AnimationGraph>>,
@@ -48,8 +52,13 @@ pub fn poor_setup_for_katana_animations(
     // TODO: system from bevy example, idk how to make it non update
     mut commands: Commands,
     animations: Res<Animations>,
-    mut players: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
+    mut players: Query<(Entity, &mut AnimationPlayer), (Added<AnimationPlayer>, With<Katana>)>,
+    mut done: Local<bool>,
 ) {
+    if *done {
+        return;
+    }
+
     for (entity, mut player) in &mut players {
         let mut transitions = AnimationTransitions::new();
 
@@ -65,12 +74,13 @@ pub fn poor_setup_for_katana_animations(
             .entity(entity)
             .insert(AnimationGraphHandle(animations.graph_handle.clone()))
             .insert(transitions);
+        *done = true;
     }
 }
 
 pub fn katana_animation(
     mouse_input: Res<ButtonInput<MouseButton>>,
-    mut animation_players: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
+    mut animation_players: Query<(&mut AnimationPlayer, &mut AnimationTransitions), With<Katana>>,
     animations: Res<Animations>,
     mut non_idle: Local<bool>,
 ) {
