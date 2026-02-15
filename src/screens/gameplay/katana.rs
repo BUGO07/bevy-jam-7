@@ -4,7 +4,10 @@ use std::{f32::consts::PI, time::Duration};
 
 use bevy::{animation::RepeatAnimation, light::CascadeShadowConfigBuilder, prelude::*};
 
-use crate::screens::gameplay::{LevelAssets, character_controller::AttackAction, player::Player};
+use crate::screens::{
+    Screen,
+    gameplay::{LevelAssets, character_controller::AttackAction, player::Player},
+};
 
 #[derive(Resource)]
 pub struct Animations {
@@ -20,7 +23,7 @@ pub fn katana_setup(
     mut commands: Commands,
     mut graphs: ResMut<Assets<AnimationGraph>>,
     level_assets: Res<LevelAssets>,
-    player: Single<Entity, With<Camera3d>>,
+    camera: Single<Entity, With<Camera3d>>,
 ) {
     // Build the animation graph
     let (graph, node_indices) = AnimationGraph::from_clips([
@@ -42,7 +45,7 @@ pub fn katana_setup(
         Transform::from_translation(Vec3::new(-0.1, -0.8, -1.4))
             .with_rotation(Quat::from_rotation_y(0.05))
             .with_scale(Vec3::splat(0.8)),
-        ChildOf(player.entity()),
+        ChildOf(*camera),
     ));
 }
 
@@ -51,13 +54,21 @@ pub fn katana_setup(
 pub fn poor_setup_for_katana_animations(
     // TODO: system from bevy example, idk how to make it non update
     mut commands: Commands,
-    animations: Res<Animations>,
+    animations: Option<Res<Animations>>,
+    screen_state: Res<State<Screen>>,
     mut players: Query<(Entity, &mut AnimationPlayer), (Added<AnimationPlayer>, With<Katana>)>,
     mut done: Local<bool>,
 ) {
+    if screen_state.is_changed() && matches!(screen_state.get(), Screen::Gameplay) {
+        *done = false;
+    }
     if *done {
         return;
     }
+
+    let Some(animations) = animations else {
+        return;
+    };
 
     for (entity, mut player) in &mut players {
         let mut transitions = AnimationTransitions::new();

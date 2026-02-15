@@ -63,7 +63,11 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         OnExit(Screen::Gameplay),
         |mut commands: Commands, camera: Single<Entity, With<Camera3d>>| {
-            commands.entity(*camera).remove_parent_in_place(); // make it so it's not despawned with the level
+            commands
+                .entity(*camera)
+                .remove::<Skybox>()
+                .despawn_children()
+                .remove_parent_in_place(); // make it so it's not despawned with the level
         },
     );
 
@@ -93,9 +97,12 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(handle_navmesh_ready);
     app.add_systems(
         Update,
-        (poor_setup_for_katana_animations, katana_animation)
-            .in_set(PausableSystems)
-            .run_if(in_state(Screen::Gameplay)),
+        (
+            poor_setup_for_katana_animations,
+            katana_animation
+                .in_set(PausableSystems)
+                .run_if(in_state(Screen::Gameplay)),
+        ),
     );
 }
 
