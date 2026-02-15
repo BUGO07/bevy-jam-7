@@ -38,14 +38,14 @@ impl HammerheadAssets {
 }
 
 #[derive(Resource)]
-struct HammerheadAnimations {
-    animations: Vec<AnimationNodeIndex>,
-    graph_handle: Handle<AnimationGraph>,
+pub struct HammerheadAnimations {
+    pub animations: Vec<AnimationNodeIndex>,
+    pub graph_handle: Handle<AnimationGraph>,
 }
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-struct Hammerhead;
+pub struct Hammerhead;
 
 fn setup(
     mut commands: Commands,

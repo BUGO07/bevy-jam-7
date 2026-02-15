@@ -7,6 +7,7 @@ use bevy_landmass::{PointSampleDistance3d, prelude::*};
 
 use crate::screens::Screen;
 use crate::screens::gameplay::LevelAssets;
+use crate::screens::gameplay::hammerhead::{Hammerhead, HammerheadAnimations, HammerheadAssets};
 
 pub struct EnemyPlugin;
 
@@ -127,11 +128,17 @@ fn print_desired_velocity(query: Query<(Entity, &AgentDesiredVelocity3d, &AgentS
 }
 
 fn enemy_track_nearby_player(
-    mut enemies: Query<(&Transform, &mut AgentTarget3d), With<Enemy>>,
+    mut enemies: Query<(Entity, &Transform, &mut AgentTarget3d), With<Enemy>>,
+    mut animation_players: Query<
+        (&mut AnimationPlayer, &mut AnimationTransitions),
+        With<Hammerhead>,
+    >,
+    animations: Res<HammerheadAnimations>,
     players: Query<(Entity, &Transform), With<super::Player>>,
     archipelago: Query<&Archipelago3d>,
 ) {
     const DETECTION_RANGE: f32 = 15.0;
+    const HITTING_RANGE: f32 = 2.0;
 
     const POINT_SAMPLE_CONFIG: PointSampleDistance3d = PointSampleDistance3d {
         animation_link_max_vertical_distance: 50.,
@@ -149,12 +156,35 @@ fn enemy_track_nearby_player(
         return;
     };
 
-    for (enemy_transform, mut target) in enemies.iter_mut() {
+    for (enemy_entity, enemy_transform, mut target) in enemies.iter_mut() {
         let distance = enemy_transform
             .translation
             .distance(player_transform.translation);
 
-        if distance <= DETECTION_RANGE {
+        let (mut player, mut transitions) = animation_players.get_mut(enemy_entity).unwrap();
+        let Some((&playing_animation_index, _)) = player.playing_animations().next() else {
+            continue;
+        };
+        if distance <= HITTING_RANGE {
+            if playing_animation_index.index() != 0 {
+                transitions
+                    .play(
+                        &mut player,
+                        animations.animations[0], // attack
+                        Duration::from_millis(250),
+                    )
+                    .repeat();
+            }
+        } else if distance <= DETECTION_RANGE {
+            if playing_animation_index.index() != 2 {
+                transitions
+                    .play(
+                        &mut player,
+                        animations.animations[2], // run
+                        Duration::from_millis(250),
+                    )
+                    .repeat();
+            }
             if let Ok(point) =
                 archipelago.sample_point(player_transform.translation, &POINT_SAMPLE_CONFIG)
             {
@@ -163,6 +193,15 @@ fn enemy_track_nearby_player(
                 *target = AgentTarget3d::Entity(player_entity);
             }
         } else {
+            if player.playing_animations().next().unwrap().0.index() != 1 {
+                transitions
+                    .play(
+                        &mut player,
+                        animations.animations[1], // idle
+                        Duration::from_millis(250),
+                    )
+                    .repeat();
+            }
             *target = AgentTarget3d::None;
         }
     }
