@@ -45,7 +45,7 @@ fn move_player_to_checkpoint(
     active_checkpoint: Single<&Transform, (With<ActiveCheckpoint>, Without<Player>)>,
 ) {
     for entity in mesh3d.iter() {
-        commands.entity(entity).insert(NoFrustumCulling);
+        commands.entity(entity).insert(NoFrustumCulling); // also disable frustum culling for meshes
     }
     player.translation = active_checkpoint.translation + Vec3::Y;
 }

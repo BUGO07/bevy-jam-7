@@ -133,18 +133,12 @@ impl CharacterControllerBundle {
             body: RigidBody::Dynamic,
             ground_caster: ShapeCaster::new(
                 caster_shape,
-
-                // Desde los pies (no desde el pecho)
-                Vec3::Y * -0.5,
-
+                Vec3::Y * 0.9,
                 Quat::default(),
-
-                // Hacia abajo
                 Dir3::NEG_Y,
             )
-            .with_max_distance(0.6) // Más margen
-            .with_max_hits(3),
-
+            .with_max_distance(0.2)
+            .with_max_hits(5),
             locked_axes: LockedAxes::ROTATION_LOCKED,
             movement: MovementBundle::default(),
         }
@@ -250,10 +244,31 @@ fn gamepad_input(
 
 fn update_grounded(
     mut commands: Commands,
-    query: Query<(Entity, &ShapeHits), With<CharacterController>>,
+    mut query: Query<
+        (Entity, &ShapeHits, &Rotation, Option<&MaxSlopeAngle>),
+        With<CharacterController>,
+    >,
+    checkpoints: Query<Entity, With<Checkpoint>>,
+    active_checkpoint: Query<Entity, With<ActiveCheckpoint>>,
 ) {
-    for (entity, hits) in &query {
-        if !hits.is_empty() {
+    for (entity, hits, rotation, max_slope_angle) in &mut query {
+        let is_grounded = hits.iter().any(|hit| {
+            if let Ok(checkpoint) = checkpoints.get(hit.entity)
+                && let Ok(active_checkpoint) = active_checkpoint.single()
+            {
+                commands
+                    .entity(active_checkpoint)
+                    .remove::<ActiveCheckpoint>();
+                commands.entity(checkpoint).insert(ActiveCheckpoint);
+            }
+            if let Some(angle) = max_slope_angle {
+                (rotation * -hit.normal2).angle_between(Vec3::Y).abs() <= angle.0
+            } else {
+                true
+            }
+        });
+
+        if is_grounded {
             commands.entity(entity).insert(Grounded);
         } else {
             commands.entity(entity).remove::<Grounded>();
@@ -453,7 +468,6 @@ fn spawn_something_punchable(
             MeshMaterial3d(materials.add(Color::srgb(0.8, 0.7, 0.6))),
             Transform::from_xyz(2.0, 1.5, -3.0),
             RigidBody::Dynamic,
-            GravityScale(0.0), // <-- AÑADIR
             Collider::cuboid(1.0, 1.0, 1.0),
             Mass(5.0),
         ))
