@@ -4,7 +4,7 @@ use std::{f32::consts::PI, time::Duration};
 
 use bevy::{animation::RepeatAnimation, light::CascadeShadowConfigBuilder, prelude::*};
 
-use crate::screens::gameplay::{LevelAssets, player::Player};
+use crate::screens::gameplay::{LevelAssets, character_controller::AttackAction, player::Player};
 
 #[derive(Resource)]
 pub struct Animations {
@@ -81,11 +81,14 @@ pub fn poor_setup_for_katana_animations(
 pub fn katana_animation(
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut animation_players: Query<(&mut AnimationPlayer, &mut AnimationTransitions), With<Katana>>,
+    mut attack_writer: MessageWriter<AttackAction>,
+    player_transform: Single<&Transform, With<Player>>,
     animations: Res<Animations>,
     mut non_idle: Local<bool>,
 ) {
     for (mut player, mut transitions) in &mut animation_players {
         if mouse_input.just_pressed(MouseButton::Left) {
+            attack_writer.write(AttackAction::Punch(player_transform.forward()));
             transitions
                 .play(
                     &mut player,

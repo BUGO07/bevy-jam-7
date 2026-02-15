@@ -17,7 +17,7 @@ use landmass_rerecast::{Island3dBundle, LandmassRerecastPlugin, NavMeshHandle3d}
 use std::f32::consts::PI;
 
 use crate::{
-    Pause,
+    PausableSystems, Pause,
     asset_tracking::LoadResource,
     menus::Menu,
     screens::{
@@ -90,14 +90,12 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         generate_navmesh.run_if(in_state(Screen::Gameplay)), //.run_if(input_just_pressed(KeyCode::Space)),
     );
-    app.add_systems(
-        Update,
-        update_sun.run_if(in_state(Screen::Gameplay).and(in_state(Pause(false)))),
-    );
     app.add_observer(handle_navmesh_ready);
     app.add_systems(
         Update,
-        (poor_setup_for_katana_animations, katana_animation).run_if(in_state(Screen::Gameplay)),
+        (poor_setup_for_katana_animations, katana_animation)
+            .in_set(PausableSystems)
+            .run_if(in_state(Screen::Gameplay)),
     );
 }
 
@@ -227,7 +225,7 @@ fn spawn_level(
     // commands.spawn(SceneRoot(level_assets.props.clone()));
 
     commands.queue(enemy::EnemySpawnCmd {
-        pos: Isometry3d::from_translation(vec3(0.0, 0.0, 5.0)),
+        transform: Transform::from_xyz(0.0, 0.0, 5.0).with_scale(Vec3::ONE * 1.3),
         parent: Some(level),
     });
     // commands.queue(enemy::EnemySpawnCmd {
@@ -318,8 +316,3 @@ fn handle_navmesh_ready(_: On<NavmeshReady>, mut navmesh_done: ResMut<NavmeshDon
 
 #[derive(Resource)]
 pub struct NavmeshArchipelagoHolder(pub Entity);
-
-fn update_sun(mut suns: Query<&mut Transform, With<DirectionalLight>>, time: Res<Time>) {
-    suns.iter_mut()
-        .for_each(|mut tf| tf.rotate_x(-time.delta_secs() * PI / 100.0));
-}

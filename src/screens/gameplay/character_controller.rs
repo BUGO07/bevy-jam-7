@@ -369,7 +369,7 @@ fn attack(
         (&GlobalTransform, Forces),
         (With<Collider>, Without<Player>, Without<Enemy>),
     >,
-    mut enemies: Query<(Entity, &GlobalTransform), With<Enemy>>,
+    mut enemies: Query<(Entity, &GlobalTransform, &mut Enemy)>,
     level_assets: Res<LevelAssets>,
     level: Single<Entity, With<Level>>,
 ) {
@@ -378,8 +378,8 @@ fn attack(
         player_transform: &Transform,
         punch_forward: &Dir3,
     ) -> Option<Vec3> {
-        const PUNCH_RANGE: f32 = 2.0;
-        const PUNCH_FORCE: f32 = 15.0;
+        const PUNCH_RANGE: f32 = 2.5;
+        const PUNCH_FORCE: f32 = 7.0;
         // Right now we only care it's in player forward direction
         // Consider other ways(maybe ray-cast?) to check if `Punchable` is there
         const MIN_DOT_PRODUCT: f32 = 0.75;
@@ -415,14 +415,19 @@ fn attack(
                     }
                 }
 
-                for (entity, transform) in enemies.iter_mut() {
+                for (entity, transform, mut enemy) in enemies.iter_mut() {
                     if let Some(impulse) =
                         punch_impulse(transform, *player_transform, punch_forward)
                     {
-                        commands.entity(entity).insert(Knockback {
-                            velocity: impulse,
-                            remaining_time: 0.3,
-                        });
+                        enemy.health -= 0.25; // quarter of the health, maybe change this
+                        if enemy.health > 0.0 {
+                            commands.entity(entity).insert(Knockback {
+                                velocity: impulse,
+                                remaining_time: 0.3,
+                            });
+                        } else {
+                            commands.entity(entity).despawn();
+                        }
                     }
                 }
 

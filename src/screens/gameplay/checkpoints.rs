@@ -1,5 +1,5 @@
 use avian3d::prelude::LinearVelocity;
-use bevy::{prelude::*, scene::SceneInstanceReady};
+use bevy::{camera::visibility::NoFrustumCulling, prelude::*, scene::SceneInstanceReady};
 
 use crate::{menus::Menu, screens::gameplay::Player};
 
@@ -39,8 +39,13 @@ fn respawn_at_checkpoint(
 
 fn move_player_to_checkpoint(
     _: On<SceneInstanceReady>,
+    mut commands: Commands,
     mut player: Single<&mut Transform, With<Player>>,
+    mesh3d: Query<Entity, With<Mesh3d>>,
     active_checkpoint: Single<&Transform, (With<ActiveCheckpoint>, Without<Player>)>,
 ) {
+    for entity in mesh3d.iter() {
+        commands.entity(entity).insert(NoFrustumCulling);
+    }
     player.translation = active_checkpoint.translation + Vec3::Y;
 }
