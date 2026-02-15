@@ -249,13 +249,15 @@ fn update_grounded(
         With<CharacterController>,
     >,
     checkpoints: Query<Entity, With<Checkpoint>>,
-    active_checkpoint: Single<Entity, With<ActiveCheckpoint>>,
+    active_checkpoint: Query<Entity, With<ActiveCheckpoint>>,
 ) {
     for (entity, hits, rotation, max_slope_angle) in &mut query {
         let is_grounded = hits.iter().any(|hit| {
-            if let Ok(checkpoint) = checkpoints.get(hit.entity) {
+            if let Ok(checkpoint) = checkpoints.get(hit.entity)
+                && let Ok(active_checkpoint) = active_checkpoint.single()
+            {
                 commands
-                    .entity(*active_checkpoint)
+                    .entity(active_checkpoint)
                     .remove::<ActiveCheckpoint>();
                 commands.entity(checkpoint).insert(ActiveCheckpoint);
             }

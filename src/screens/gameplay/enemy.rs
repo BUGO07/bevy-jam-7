@@ -6,7 +6,6 @@ use bevy::time::common_conditions::on_timer;
 use bevy_landmass::{PointSampleDistance3d, prelude::*};
 
 use crate::screens::Screen;
-
 use crate::screens::gameplay::LevelAssets;
 
 pub struct EnemyPlugin;
@@ -118,9 +117,9 @@ fn spawn_enemy(
 }
 
 fn print_desired_velocity(query: Query<(Entity, &AgentDesiredVelocity3d, &AgentState)>) {
-    for (entity, desired_velocity, s) in query.iter() {
+    for (entity, desired_velocity, state) in query.iter() {
         debug!(
-            "entity={:?}, desired_velocity={} {s:?}",
+            "entity={:?}, desired_velocity={} {state:?}",
             entity,
             desired_velocity.velocity()
         );
@@ -223,14 +222,8 @@ fn update_grounded(
         // The character is grounded if the shape caster has a hit with a normal
         // that isn't too steep.
         let is_grounded = hits.iter().any(|hit| {
-            // if let Some(angle) = max_slope_angle {
-            let angle = 0.1;
-            (rotation * -hit.normal2).angle_between(Vector::Y).abs() <= angle
-            // } else {
-            //     true
-            // }
+            (rotation * -hit.normal2).angle_between(Vector::Y).abs() <= 35f32.to_radians()
         });
-
         if is_grounded {
             commands.entity(entity).insert(Grounded);
         } else {
